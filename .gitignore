@@ -1,0 +1,8 @@
+# 运行时缓存：由 fetch_universe.py 生成，含个股行情/基本面，体积大且不入库
+cache/
+# Python 字节码
+__pycache__/
+*.pyc
+# 编辑器/OS
+.DS_Store
+*.swp
