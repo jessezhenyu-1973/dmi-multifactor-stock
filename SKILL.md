@@ -115,6 +115,18 @@ cd "<skill>/scripts"
 | `final_backtest.log` | 基线 vs 调参对比报告 |
 | `robustness.log` / `robustness_result.json` | 样本外检验与稳定性矩阵 |
 
+## 示例输出（仓库内对照）
+
+`examples/` 目录收录各脚本**真实跑出的结果**，调用前可先对照预期输出格式与数量级：
+
+- `examples/final_backtest.log` — `run_tuned.py` 的基线 vs 调参对比报告
+- `examples/robustness.log` / `robustness_result.json` — `robustness.py` 的样本外检验与稳定性矩阵
+- `examples/tune_best.json` — `tune.py` 网格搜索最优配置
+- `examples/real_backtest_fundamental.log` — `multi_factor_dmi_strategy.py --real` 单轮真实回测样例
+- `examples/README.md` — 上述文件说明 + 关键结论速览
+
+> 这些结果是 2023–2024 沪深300 的历史回测演示，仅作方法参考，不构成投资建议。
+
 ## 调用示例（给 agent）
 
 - 「用沪深300 跑一轮多因子回测并调参」→ 执行步骤 1→2→3。

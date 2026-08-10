@@ -6,3 +6,11 @@ __pycache__/
 # 编辑器/OS
 .DS_Store
 *.swp
+
+# 脚本在 scripts/ 内原地运行生成的产物（运行范例见 examples/，不忽略）
+scripts/tune_best.json
+scripts/final_backtest.log
+scripts/robustness.log
+scripts/robustness_result.json
+scripts/real_backtest_fundamental.log
+scripts/tune_best_quick.json
