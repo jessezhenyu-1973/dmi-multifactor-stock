@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-08-11T18:39:00+08:00",
+  "version": "1.0",
+  "market_regime": {
+    "regime": "震荡市",
+    "confidence": 0.5,
+    "indices": {
+      "上证综指": {"ma20": 3950, "ma60": 3920, "pvs_ma20": -0.4, "pvs_ma60": 0.4},
+      "深证成指": {"ma20": 14350, "ma60": 14200, "pvs_ma20": -0.3, "pvs_ma60": 0.3},
+      "沪深300": {"ma20": 4700, "ma60": 4650, "pvs_ma20": -0.3, "pvs_ma60": 0.4}
+    }
+  },
+  "top_sectors": [
+    {"name": "人形机器人", "change_pct": 5.23, "composite_score": 0.847, "capital_score": 0.9},
+    {"name": "创新药", "change_pct": 3.18, "composite_score": 0.692, "capital_score": 0.7},
+    {"name": "存储芯片", "change_pct": 2.95, "composite_score": 0.615, "capital_score": 0.6},
+    {"name": "半导体", "change_pct": 1.87, "composite_score": 0.550, "capital_score": 0.5},
+    {"name": "光刻胶", "change_pct": 1.52, "composite_score": 0.480, "capital_score": 0.4}
+  ],
+  "leading_stocks": [
+    {"name": "百花医药", "thscode": "600721.SH", "sector": "创新药", "price": 12.75, "change_pct": 10.0, "composite_score": 0.920, "consecutive_limit_up": 6},
+    {"name": "哈药股份", "thscode": "600664.SH", "sector": "创新药", "price": 8.27, "change_pct": 10.0, "composite_score": 0.850, "consecutive_limit_up": 3},
+    {"name": "太极实业", "thscode": "600667.SH", "sector": "存储芯片", "price": 21.2, "change_pct": 10.0, "composite_score": 0.780, "seal_money": 34.3},
+    {"name": "巨轮智能", "thscode": "002031.SZ", "sector": "人形机器人", "price": 5.84, "change_pct": 10.0, "composite_score": 0.720, "seal_money": 6.9},
+    {"name": "华东数控", "thscode": "002248.SZ", "sector": "人形机器人", "price": 11.06, "change_pct": 10.0, "composite_score": 0.700, "consecutive_limit_up": 2}
+  ]
+}
