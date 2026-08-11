@@ -193,6 +193,49 @@ def compute_ma_lines(df: pd.DataFrame, ma13: int = 13, ma34: int = 34) -> pd.Dat
     return result
 
 
+def compute_momentum(df: pd.DataFrame, short: int = 20, long: int = 60) -> pd.DataFrame:
+    """
+    计算动量因子所需字段：短/长周期价格动量（相对收益）。
+    - short_mom: 近 short 根收益率（短期动量）
+    - long_mom:  近 long 根收益率（中期动量，更稳）
+    """
+    result = df.copy()
+    result['short_mom'] = result['close'].pct_change(short)
+    result['long_mom'] = result['close'].pct_change(long)
+    return result
+
+
+def compute_momentum_factor(
+    df: pd.DataFrame,
+    date_idx: int,
+    short_w: float = 0.6,
+    long_w: float = 0.4,
+    scale: float = 400.0
+) -> float:
+    """
+    动量因子得分 (0-100)
+
+    逻辑：短/中期动量加权合成，动量越强得分越高（追涨，与价值因子互补）。
+    score = 50 + (short_w*short_mom + long_w*long_mom) * scale，裁剪到 [0,100]。
+    数据不足（< long 根）返回中性 50。
+
+    Args:
+        df: 含 short_mom/long_mom 列的 DataFrame（由 compute_momentum 预计算）
+        date_idx: 当前本地行号
+        short_w/long_w: 短/长动量权重（默认 0.6/0.4）
+        scale: 收益→分数的缩放（默认 400：10% 动量 ≈ +40 分）
+    """
+    if 'short_mom' not in df.columns or 'long_mom' not in df.columns or date_idx < 60:
+        return 50.0
+    s = df.iloc[date_idx]['short_mom']
+    l = df.iloc[date_idx]['long_mom']
+    if pd.isna(s) or pd.isna(l):
+        return 50.0
+    raw = short_w * s + long_w * l
+    score = 50.0 + raw * scale
+    return float(min(max(score, 0.0), 100.0))
+
+
 # ============================================================
 # 2. 基本面因子计算
 # ============================================================
@@ -249,6 +292,124 @@ def compute_fundamental_score(
     return scores
 
 
+def compute_quality_score(
+    df: pd.DataFrame,
+    roe_ref: float = 12.0,
+    roe_scale: float = 4.0
+) -> pd.Series:
+    """
+    质量因子得分 (0-100) —— 与价值因子正交
+
+    价值因子用 PE/PB 便宜度 + ROE 阈值过滤；质量因子用 ROE 水平的【连续】打分，
+    并可在真实基本面提供毛利率/资产负债率时合成更完整的质量分（高毛利、低负债更优）。
+
+    组件：
+    - 盈利能力：ROE 越高越优，相对参考值 roe_ref 线性映射（roe_ref=12% → 50 分，每 +1pct ≈ +4 分）
+    - 盈利质量（可选）：gross_margin 越高越优（30% 为中性）；debt_ratio 越低越优（50% 为中性）
+    缺失字段不参与；全缺返回中性 50，避免 KeyError。
+
+    Args:
+        df: 含 roe / gross_margin / debt_ratio 任一列的 DataFrame
+        roe_ref: ROE 中性参考值（%）
+        roe_scale: ROE→分数 缩放
+    """
+    idx = df.index
+    comps = []
+
+    # 盈利能力（必选组件）
+    if 'roe' in df.columns:
+        roe = pd.to_numeric(df['roe'], errors='coerce')
+        prof = (50.0 + (roe - roe_ref) * roe_scale).clip(0.0, 100.0)
+    else:
+        prof = pd.Series(50.0, index=idx)
+    comps.append(prof)
+
+    # 盈利质量增强（真实数据接入后才生效；mock 仅 roe 时不影响）
+    if 'gross_margin' in df.columns:
+        gm = pd.to_numeric(df['gross_margin'], errors='coerce')
+        gm_score = (50.0 + (gm - 0.30) * 100.0).clip(0.0, 100.0)  # 毛利率 30% 为中性
+        comps.append(gm_score)
+    if 'debt_ratio' in df.columns:
+        dr = pd.to_numeric(df['debt_ratio'], errors='coerce')
+        dr_score = (50.0 - (dr - 0.50) * 100.0).clip(0.0, 100.0)  # 资产负债率 50% 为中性，越低越优
+        comps.append(dr_score)
+
+    if len(comps) > 1:
+        quality = pd.concat(comps, axis=1).mean(axis=1)
+    else:
+        quality = comps[0]
+    return quality
+
+
+# ============================================================
+# 2.5 时点正确舆情（无需外部数据，绝不使用未来信息）
+# ============================================================
+def compute_point_in_time_sentiment(df: pd.DataFrame, i: int) -> float:
+    """
+    由个股自身历史量价推导的"技术面情绪"，完全时点正确（只用 index<=i 的数据）。
+    返回 [-1, 1]：
+      - 近 20 日收益率（趋势方向）为主
+      - 近 20 日成交量相对前 20 日的放大倍数为辅（放量助涨、缩量助跌）
+    用于替换此前"单一未来快照"资金流舆情，从根上消除前瞻偏差。
+    """
+    if i < 20:
+        return 0.0
+    close = df['close'].values
+    r20 = close[i] / close[i - 20] - 1.0
+    vol = df['volume'].values
+    avg_recent = vol[i - 19:i + 1].mean()
+    avg_prev = vol[max(0, i - 39):i - 19].mean()
+    vol_ratio = (avg_recent / avg_prev - 1.0) if avg_prev > 0 else 0.0
+    raw = 6.0 * r20 + 0.5 * vol_ratio
+    return float(np.tanh(raw))
+
+
+# ============================================================
+# 2.6 市场状态（regime）识别：沪深300 趋势 + 波动率
+# ============================================================
+class MarketRegime:
+    """
+    基于宽基基准（沪深300）的市场状态识别，用于熊市/高波动期降低暴露。
+    状态 -> 目标暴露：bull=1.0 / neutral=0.5 / bear=0.0。
+    完全时点正确：只用基准在 date 及之前的数据判定。
+    """
+
+    def __init__(self, benchmark: pd.DataFrame, ma_window: int = 200,
+                 vol_window: int = 60, vol_z_thresh: float = 2.0):
+        self.benchmark = benchmark
+        self.ma_window = ma_window
+        self.vol_window = vol_window
+        self.vol_z_thresh = vol_z_thresh
+        self.ret = benchmark['close'].pct_change()
+        self.roll_vol = self.ret.rolling(vol_window).std()
+        self.ma = benchmark['close'].rolling(ma_window).mean()
+
+    def exposure(self, date) -> float:
+        """返回目标暴露倍数 [0,1]，基于 date 及之前的数据判定 regime。"""
+        if self.benchmark is None or date not in self.benchmark.index:
+            return 1.0
+        i = self.benchmark.index.get_loc(date)
+        if i < self.ma_window:
+            return 1.0  # 预热期默认满仓
+        price = self.benchmark['close'].iloc[i]
+        ma = self.ma.iloc[i]
+        vol = self.roll_vol.iloc[i]
+        if pd.isna(vol) or vol <= 0:
+            vol_z = 0.0
+        else:
+            hist = self.roll_vol.iloc[:i + 1]
+            vol_median = hist.median()
+            vol_std = hist.std()
+            vol_z = (vol - vol_median) / (vol_std + 1e-12) if vol_std and not pd.isna(vol_std) else 0.0
+        trend_up = price > ma
+        high_vol = vol_z > self.vol_z_thresh
+        if (not trend_up) and high_vol:
+            return 0.0   # 熊市 + 高波动：空仓
+        if (not trend_up) or high_vol:
+            return 0.5   # 熊市趋势 / 牛但高波动：半仓
+        return 1.0       # 牛市平稳：满仓
+
+
 # ============================================================
 # 3. 舆情监控模块
 # ============================================================
@@ -275,10 +436,20 @@ class SentimentMonitor:
     4. 模拟数据（用于回测）
     """
     
-    def __init__(self, use_real_data: bool = False):
+    # 真实资金流舆情归一化缩放：MainNetFlow/总市值 后再乘该系数并 tanh。
+    # 约 0.1% 市值净流入 -> 0.1*1000 -> tanh≈0.76（强但非饱和），单日常规流幅映射到 ±0.1~0.9。
+    FUND_FLOW_SENTIMENT_SCALE = 1000.0
+
+    def __init__(self, use_real_data: bool = False, cache_dir: Optional[str] = None,
+                 use_westock_real: bool = False):
         self.use_real_data = use_real_data
+        self.cache_dir = cache_dir
+        # 真实舆情开关（腾讯自选股 westock-mcp 主力资金流）：开启且存在 {code}_realflow.csv 时，
+        # 由主力净流入/总市值归一化得到 [-1,1] 舆情分，替换 md5 mock。基线（未开启）零影响。
+        self.use_westock_real = use_westock_real
+        self._warned_lookahead = False
         self.sentiment_history: List[SentimentSignal] = []
-    
+
     def get_sentiment_score(self, stock_code: str, date: str) -> float:
         """
         获取个股舆情得分（-1 到 1）
@@ -290,11 +461,47 @@ class SentimentMonitor:
         Returns:
             舆情得分
         """
+        # 优先级 1：真实资金流舆情（westock-mcp，已落地）
+        if self.use_westock_real:
+            s = self._real_sentiment_from_flow(stock_code)
+            if s is not None:
+                return s
+        # 优先级 2：AKShare 真实舆情（占位，暂未实现）
         if self.use_real_data:
             return self._fetch_real_sentiment(stock_code, date)
-        else:
-            # 回测时使用模拟数据
-            return self._generate_mock_sentiment(stock_code, date)
+        # 回退：确定性 md5 mock（保证可复现）
+        return self._generate_mock_sentiment(stock_code, date)
+
+    def _real_sentiment_from_flow(self, stock_code: str) -> Optional[float]:
+        """读 {code}_realflow.csv，由主力净流入/总市值归一化得到舆情分；无缓存返回 None。"""
+        if not self.cache_dir:
+            return None
+        import os
+        p = os.path.join(self.cache_dir, f"{stock_code}_realflow.csv")
+        if not os.path.exists(p):
+            return None
+        try:
+            import pandas as pd
+            import math
+            df = pd.read_csv(p, index_col=0, parse_dates=True)
+            if df.empty:
+                return None
+            row = df.iloc[0]
+            mcap_yuan = float(row["total_market_cap_yi"]) * 1e8
+            flow = float(row["main_net_flow"])
+            if mcap_yuan <= 0:
+                return 0.0
+            ratio = flow / mcap_yuan
+            if not self._warned_lookahead:
+                logger.warning(
+                    "真实资金流舆情使用单一当前快照(2026-08-10)覆盖全部历史再平衡日，含前瞻偏差；"
+                    "仅用于验证数据接入，非时点正确信号。"
+                )
+                self._warned_lookahead = True
+            return float(math.tanh(ratio * self.FUND_FLOW_SENTIMENT_SCALE))
+        except Exception as e:
+            logger.warning(f"读取真实资金流舆情失败 {p}: {e}")
+            return None
     
     def _fetch_real_sentiment(self, stock_code: str, date: str) -> float:
         """
@@ -493,6 +700,10 @@ class FactorWeights:
     fundamental_weight: float = 0.18  # PE/PB/ROE 价值筛选
     # —— 舆情面 ——
     sentiment_weight: float = 0.14    # 新闻情绪 + 资金流向
+    # —— 动量（可选，默认 0：关闭，保持原 9 因子基线不变；启用时建议将其余权重同比缩放使总和=1）——
+    momentum_weight: float = 0.0
+    # —— 质量（可选，默认 0：关闭；以 ROE 盈利能力为核心的连续打分，与价值因子正交）——
+    quality_weight: float = 0.0
 
 
 @dataclass
@@ -537,6 +748,9 @@ class MultiFactorDMIStrategy:
         use_real_data: bool = False,  # 是否使用真实数据
         data_source: Optional[DataSourceManager] = None,  # 数据源管理器
         cost: Optional[TransactionCost] = None,  # 交易成本模型
+        use_point_in_time_sentiment: bool = False,  # 时点正确技术舆情（默认关闭，保持基线）
+        use_regime: bool = False,  # 市场状态(regime)暴露调控（默认关闭，保持基线）
+        regime: Optional[MarketRegime] = None,  # 预构建的 MarketRegime 实例
     ):
         self.initial_capital = initial_capital
         self.top_n = top_n
@@ -547,6 +761,10 @@ class MultiFactorDMIStrategy:
         self.use_real_data = use_real_data
         self.data_source = data_source or DataSourceManager(use_real_data=use_real_data)
         self.cost = cost or TransactionCost()
+        # 时点正确舆情 / regime 调控（默认关闭，不影响既有基线）
+        self.use_point_in_time_sentiment = use_point_in_time_sentiment
+        self.use_regime = use_regime
+        self.regime = regime
         
         # 回测结果
         self.nav_history: List[dict] = []  # 净值历史
@@ -739,23 +957,31 @@ class MultiFactorDMIStrategy:
         rsi_score: float = 50.0,
         bollinger_score: float = 50.0,
         wyckoff_score: float = 50.0,
-        method135_score: float = 50.0
+        method135_score: float = 50.0,
+        momentum_score: float = 50.0,
+        quality_score: float = 50.0
     ) -> float:
         """
-        计算综合因子得分（9 因子线性加权）
-        
+        计算综合因子得分（9 + 动量 + 质量 因子线性加权）
+
         Args:
             dmi_score: DMI 因子得分 (0-100)
             fundamental_score: 基本面得分 (0-100)
             sentiment_score: 舆情得分 (-1 到 1)，转换为 (0-100)
             macd_score ~ method135_score: 各技术指标因子得分 (0-100)
-        
+            momentum_score: 动量因子得分 (0-100)，默认 50（中性）
+            quality_score: 质量因子得分 (0-100)，默认 50（中性）
+
         Returns:
             综合得分
         """
         # 舆情得分转换为 0-100
         sentiment_factor = (sentiment_score + 1) / 2 * 100
-        
+
+        # 动量 / 质量 权重默认 0，未启用时不改变原 9 因子基线
+        momentum_factor = momentum_score
+        quality_factor = quality_score
+
         composite = (
             self.weights.dmi_weight * dmi_score +
             self.weights.macd_weight * macd_score +
@@ -765,9 +991,11 @@ class MultiFactorDMIStrategy:
             self.weights.wyckoff_weight * wyckoff_score +
             self.weights.method135_weight * method135_score +
             self.weights.fundamental_weight * fundamental_score +
-            self.weights.sentiment_weight * sentiment_factor
+            self.weights.sentiment_weight * sentiment_factor +
+            self.weights.momentum_weight * momentum_factor +
+            self.weights.quality_weight * quality_factor
         )
-        
+
         return composite
     
     def _compute_nav(self, date, data_map: Dict[str, pd.DataFrame]) -> float:
@@ -851,48 +1079,87 @@ class MultiFactorDMIStrategy:
         stock_codes: List[str],
         start_date: str = "20230101",
         end_date: str = "",
-        fetch_fundamental: bool = True
+        fetch_fundamental: bool = True,
+        max_workers: int = 1,
+        show_progress: bool = True,
     ) -> Tuple[Dict[str, pd.DataFrame], Optional[Dict[str, pd.DataFrame]]]:
         """
-        获取股票数据（支持真实数据自动降级）
-        
+        获取股票数据（支持真实数据自动降级）。
+
         Args:
             stock_codes: 股票代码列表（可带 .SZ/.SH 后缀）
             start_date: 开始日期 YYYYMMDD
             end_date: 结束日期 YYYYMMDD
             fetch_fundamental: 是否获取基本面数据（真实行情下该接口数据质量不稳时可关闭）
-        
+            max_workers: 并行抓取线程数。>1 时启用线程池（默认 1，串行，与旧行为一致、
+                         最稳）。远端对并发敏感，建议 ≤4；单任务异常不影响其余股票。
+            show_progress: 是否打印 [已抓/总数] 进度（含命中缓存提示）
+
         Returns:
             (K 线数据字典, 基本面数据字典)
         """
-        data_map = {}
-        fundamental_data = {}
-        
-        for code in stock_codes:
-            logger.info(f"正在获取 {code} 数据...")
-            
-            # 获取 K 线
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        def _fetch_one(code: str):
             kline = self.data_source.fetch_kline(code, start_date, end_date)
-            if kline is not None and not kline.empty:
-                data_map[code] = kline
-                logger.info(f"  {code} K 线数据: {len(kline)} 条")
-            else:
-                logger.warning(f"  {code} K 线数据获取失败")
-            
-            # 获取基本面数据
-            if fetch_fundamental:
+            fund = None
+            if fetch_fundamental and kline is not None and not kline.empty:
                 fund = self.data_source.fetch_fundamental(code, start_date, end_date)
                 if fund is not None:
                     # 将基本面索引对齐到 K 线交易日，缺失日 ffill/bfill 兜底，
                     # 保证 _rebalance 中 `date in fundamental_data[code].index` 始终命中
                     fund = fund.reindex(kline.index)
                     fund = fund.ffill().bfill()
-                    fundamental_data[code] = fund
-                    logger.info(f"  {code} 基本面数据: {len(fund)} 条")
-            
-            # 节流：避免密集请求触发 AKShare 远端限流/断连
-            time.sleep(0.6)
-        
+            return code, kline, fund
+
+        data_map: Dict[str, pd.DataFrame] = {}
+        fundamental_data: Dict[str, pd.DataFrame] = {}
+        total = len(stock_codes)
+        done = 0
+
+        def _report(code: str, ok: bool, cached: bool = False):
+            nonlocal done
+            done += 1
+            if show_progress:
+                tag = "缓存" if cached else ("OK" if ok else "FAIL")
+                logger.info(f"[{done}/{total} {done / total * 100:.0f}%] {code} {tag}")
+
+        if max_workers and max_workers > 1:
+            # 并行模式：单任务异常被隔离，不中断整体；失败时回退为 mock/空
+            with ThreadPoolExecutor(max_workers=min(max_workers, 8)) as ex:
+                futs = {ex.submit(_fetch_one, c): c for c in stock_codes}
+                for fut in as_completed(futs):
+                    code = futs[fut]
+                    try:
+                        c, kline, fund = fut.result()
+                        if kline is not None and not kline.empty:
+                            data_map[c] = kline
+                            if fund is not None:
+                                fundamental_data[c] = fund
+                            _report(c, True)
+                        else:
+                            _report(c, False)
+                    except Exception as e:
+                        logger.warning(f"  {code} 抓取异常: {e}")
+                        _report(code, False)
+        else:
+            # 串行模式（默认，与旧行为一致）：保留 0.6s 节流防 AKShare 限流
+            for code in stock_codes:
+                try:
+                    c, kline, fund = _fetch_one(code)
+                    if kline is not None and not kline.empty:
+                        data_map[c] = kline
+                        if fund is not None:
+                            fundamental_data[c] = fund
+                        _report(c, True)
+                    else:
+                        logger.warning(f"  {code} K 线数据获取失败")
+                        _report(c, False)
+                except Exception as e:
+                    logger.warning(f"  {code} 抓取异常: {e}")
+                    _report(code, False)
+                time.sleep(0.6)
+
         return data_map, fundamental_data
     
     def run_backtest(
@@ -944,6 +1211,14 @@ class MultiFactorDMIStrategy:
             df = compute_ma_lines(df)
             data_map[code] = df
         
+        # 重置组合状态：保证多次调用 run_backtest（如 walk-forward 多折）互不污染
+        self.current_positions.clear()
+        self.position_dates.clear()
+        self.position_shares.clear()
+        self.position_cost_basis.clear()
+        self.nav_history.clear()
+        self.trade_log.clear()
+
         # 初始化净值与现金
         nav = self.initial_capital
         self.cash = self.initial_capital
@@ -1023,7 +1298,104 @@ class MultiFactorDMIStrategy:
         logger.info(f"  交易次数: {stats['total_trades']}")
         
         return result_df
-    
+
+    # ------------------------------------------------------------
+    # 2.7 滚动窗口 walk-forward 验证（样本外 OOS 稳健性）
+    # ------------------------------------------------------------
+    @staticmethod
+    def _window_stats(nav: np.ndarray) -> dict:
+        """由一段连续净值序列计算区间收益/年化/夏普/最大回撤。"""
+        if len(nav) < 2:
+            return {"total_return": 0.0, "annual_return": 0.0,
+                    "sharpe": 0.0, "max_drawdown": 0.0, "days": len(nav)}
+        nav = np.asarray(nav, dtype=float)
+        rets = np.diff(nav) / nav[:-1]
+        total_return = nav[-1] / nav[0] - 1.0
+        n = len(nav)
+        annual_return = (1.0 + total_return) ** (252.0 / n) - 1.0
+        rf = 0.03 / 252.0
+        sd = rets.std()
+        sharpe = ((rets.mean() - rf) / sd) * np.sqrt(252.0) if sd and sd > 0 else 0.0
+        peak = np.maximum.accumulate(nav)
+        max_drawdown = ((nav - peak) / peak).min()
+        return {"total_return": total_return, "annual_return": annual_return,
+                "sharpe": sharpe, "max_drawdown": max_drawdown, "days": n}
+
+    def walk_forward_validation(
+        self,
+        data_map: Dict[str, pd.DataFrame],
+        fundamental_data: Optional[Dict[str, pd.DataFrame]] = None,
+        benchmark: Optional[pd.DataFrame] = None,
+        start_date: str = "20220101",
+        end_date: str = "20251231",
+        n_folds: int = 5,
+        warmup_days: int = 250,
+    ) -> dict:
+        """
+        滚动窗口 walk-forward 验证：把样本区间切为 n_folds 段连续的【样本外】测试窗口，
+        每段前接 warmup_days 历史交易日做指标预热（不计入测试收益），从而每段测试期都
+        严格"未参与过参数拟合"——本策略权重为先前一次性调参固定，故任何测试期天然样本外。
+
+        返回：{'folds':[每段统计], 'overall': 拼接后的样本外总统计, 'oos_nav': 连续样本外净值序列}
+        """
+        start = pd.Timestamp(start_date)
+        end = pd.Timestamp(end_date)
+        all_dates = sorted(set().union(*(df.index for df in data_map.values())))
+        all_dates = [d for d in all_dates if start <= d <= end]
+        if len(all_dates) < warmup_days + 30:
+            raise ValueError(f"数据不足以支撑 walk-forward（需 ≥ {warmup_days + 30} 交易日，实有 {len(all_dates)}）")
+
+        test_dates = all_dates[warmup_days:]
+        fold_bounds = np.array_split(np.arange(len(test_dates)), n_folds)
+
+        oos_nav = [float(self.initial_capital)]
+        fold_stats = []
+        for k, seg in enumerate(fold_bounds):
+            if len(seg) == 0:
+                continue
+            t0 = test_dates[seg[0]]      # 测试起点
+            t1 = test_dates[seg[-1]]     # 测试终点
+            warm0 = all_dates[0]         # 预热从全局起点（含 warmup_days 历史）
+
+            # 切片到 [warm0, t1]，保证指标在 warmup 期预热
+            dm_slice = {c: df.loc[(df.index >= warm0) & (df.index <= t1)]
+                        for c, df in data_map.items() if not df.empty}
+            fd_slice = None
+            if fundamental_data:
+                fd_slice = {c: f.loc[(f.index >= warm0) & (f.index <= t1)]
+                            for c, f in fundamental_data.items() if c in dm_slice}
+
+            result = self.run_backtest(
+                data_map=dm_slice, fundamental_data=fd_slice,
+                start_date=warm0.strftime("%Y%m%d"), end_date=t1.strftime("%Y%m%d"),
+            )
+            if result.empty:
+                continue
+
+            # 仅提取测试窗口 [t0, t1] 的净值做样本外统计
+            test_mask = (result['date'] >= str(t0)) & (result['date'] <= str(t1))
+            test_df = result.loc[test_mask]
+            if test_df.empty:
+                continue
+            seg_nav = test_df['nav'].values.astype(float)
+            # 衔接到上一段末尾，形成连续样本外净值曲线
+            scale = oos_nav[-1] / seg_nav[0]
+            oos_nav.extend((seg_nav[1:] * scale).tolist())
+
+            st = self._window_stats(seg_nav)
+            st.update({"fold": k + 1, "start": str(t0), "end": str(t1)})
+            fold_stats.append(st)
+            logger.info(f"  WF 第{k+1}段 [{t0.date()}~{t1.date()}] 收益={st['total_return']:.2%} "
+                        f"年化={st['annual_return']:.2%} 夏普={st['sharpe']:.2f} 回撤={st['max_drawdown']:.2%}")
+
+        oos_series = pd.DataFrame({"nav": oos_nav})
+        overall = self._window_stats(oos_series['nav'].values)
+        overall["n_folds"] = len(fold_stats)
+        logger.info(f"Walk-forward 样本外整体: 收益={overall['total_return']:.2%} "
+                    f"年化={overall['annual_return']:.2%} 夏普={overall['sharpe']:.2f} "
+                    f"回撤={overall['max_drawdown']:.2%}")
+        return {"folds": fold_stats, "overall": overall, "oos_nav": oos_series}
+
     def _rebalance(
         self,
         data_map: Dict[str, pd.DataFrame],
@@ -1054,7 +1426,13 @@ class MultiFactorDMIStrategy:
             bollinger_score = self.compute_bollinger_factor(df, i)
             wyckoff_score = self.compute_wyckoff_factor(df, i)
             method135_score = self.compute_135_method_factor(df, i)
-            
+
+            # 动量因子（仅当权重 > 0 时计算，避免无谓开销；默认关闭）
+            momentum_score = 50.0
+            if self.weights.momentum_weight > 0:
+                df_m = compute_momentum(df)
+                momentum_score = compute_momentum_factor(df_m, i)
+
             # 基本面因子
             fundamental_score = 50.0  # 默认中性
             if fundamental_data and code in fundamental_data:
@@ -1064,15 +1442,31 @@ class MultiFactorDMIStrategy:
                         fundamental_score = compute_fundamental_score(fund_df).get(date, 50.0)
                     except:
                         pass
-            
+
+            # 质量因子（仅当权重 > 0 时计算；默认关闭，不影响基线）
+            quality_score = 50.0
+            if self.weights.quality_weight > 0 and fundamental_data and code in fundamental_data:
+                if date in fundamental_data[code].index:
+                    try:
+                        fund_df = fundamental_data[code]
+                        quality_score = compute_quality_score(fund_df).get(date, 50.0)
+                    except:
+                        pass
+
             # 舆情因子
-            sentiment_score = self.sentiment_monitor.get_sentiment_score(code, str(date))
-            
-            # 综合得分（9 因子加权）
+            if self.use_point_in_time_sentiment:
+                # 时点正确：仅用个股自身历史量价，绝不使用未来数据（消前瞻）
+                sentiment_score = compute_point_in_time_sentiment(df, i)
+            else:
+                sentiment_score = self.sentiment_monitor.get_sentiment_score(code, str(date))
+
+            # 综合得分（9 因子 + 可选动量 / 质量 加权）
             composite = self.composite_score(
                 dmi_score, fundamental_score, sentiment_score,
                 macd_score, kdj_score, rsi_score, bollinger_score,
-                wyckoff_score, method135_score
+                wyckoff_score, method135_score,
+                momentum_score=momentum_score,
+                quality_score=quality_score
             )
             scores[code] = composite
         
@@ -1082,16 +1476,27 @@ class MultiFactorDMIStrategy:
         # 获取当前持仓
         current_held = set(self.current_positions.keys())
         selected = set([code for code, _ in ranked[:self.top_n]])
-        
+
         # 卖出不在新组合中的股票
         to_sell = current_held - selected
         for code in to_sell:
             if date in data_map[code].index:
                 self._execute_sell(code, date, data_map[code].loc[date, 'close'], "调仓卖出")
-        
+
+        # regime 调控：熊市/高波动期降低暴露（默认 use_regime=False -> 满仓，不影响基线）
+        regime_exposure = 1.0
+        if self.use_regime and self.regime is not None:
+            regime_exposure = self.regime.exposure(date)
+        if regime_exposure <= 0.0:
+            # 空仓：清掉全部当前持仓，不再买入
+            for code in list(self.current_positions.keys()):
+                if code in data_map and date in data_map[code].index:
+                    self._execute_sell(code, date, data_map[code].loc[date, 'close'], "regime 空仓")
+            return
+
         # 买入新选中的股票
         to_buy = selected - current_held
-        available_cash = self.cash
+        available_cash = self.cash * regime_exposure
         
         if to_buy and available_cash > 0:
             equal_weight = available_cash / len(to_buy)
@@ -1199,65 +1604,133 @@ def generate_mock_data(
 # 7. 主函数
 # ============================================================
 
-def main(use_real: bool = False):
+def main(use_real: bool = False, use_westock_real: bool = False,
+         use_real_hs300: bool = False, use_pit_sentiment: bool = False,
+         use_regime: bool = False, hs300_limit: Optional[int] = None):
     """运行回测演示
-    
+
     Args:
         use_real: True 使用 AKShare 真实行情（需 pip install akshare 且联网），
                   False 使用内置模拟数据
+        use_westock_real: True 接入腾讯自选股 westock-mcp 真实基本面+资金流舆情
+                  （确定性 mock K线 + 真实 pe/pb/roe/毛利率/负债率 + 真实主力净流入舆情）。
+                  需先运行 gen_real_cache.py 生成 cache/{code}_realfund.csv / {code}_realflow.csv。
+        use_real_hs300: True 使用 AKShare 自包含真实数据加载器，对沪深300成分股做
+                  时点正确(point-in-time)回测 + walk-forward 样本外验证。
+                  --pit-sentiment 启用时点正确技术舆情；--regime 启用市场状态暴露调控。
+                  --hs300-limit N 可限制成分股数量（快速验证）。
     """
-    
+    import os
+    CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cache")
+
     stock_codes = [
         "000001.SZ", "000002.SZ", "600000.SH", "600036.SH",
         "000858.SZ", "600519.SH", "000333.SZ", "601318.SH",
         "002594.SZ", "600276.SH"
     ]
-    
-    # 初始化策略
-    strategy = MultiFactorDMIStrategy(
-        initial_capital=1_000_000,
-        top_n=5,
-        factor_weights=FactorWeights(
-            dmi_weight=0.12,
-            macd_weight=0.12,
-            kdj_weight=0.08,
-            rsi_weight=0.08,
-            bollinger_weight=0.08,
-            wyckoff_weight=0.10,
-            method135_weight=0.10,
-            fundamental_weight=0.18,
-            sentiment_weight=0.14
-        ),
-        risk_manager=RiskManager(
-            stop_loss_pct=-0.10,  # 10% 止损
-            max_drawdown_pct=-0.20,  # 20% 最大回撤
-            max_positions=10,
-        ),
-        sentiment_monitor=SentimentMonitor(use_real_data=False),
-        rebalance_freq=20,
-        use_real_data=use_real,
+
+    factor_weights = FactorWeights(
+        dmi_weight=0.12, macd_weight=0.12, kdj_weight=0.08, rsi_weight=0.08,
+        bollinger_weight=0.08, wyckoff_weight=0.10, method135_weight=0.10,
+        fundamental_weight=0.18, sentiment_weight=0.14,
     )
-    
-    # 运行回测
-    if use_real:
-        logger.info("使用 AKShare 真实行情进行回测（2024 全年，含真实基本面因子）")
+    risk_manager = RiskManager(
+        stop_loss_pct=-0.10,  # 10% 止损
+        max_drawdown_pct=-0.20,  # 20% 最大回撤
+        max_positions=10,
+    )
+
+    if use_real_hs300:
+        # —— 真实 HS300 时点正确回测 + walk-forward 样本外验证 ——
+        from real_data_loader import build_real_dataset, get_hs300_codes
+        codes = get_hs300_codes(limit=hs300_limit)
+        logger.info(f"真实 HS300 回测：{len(codes)} 只 | pit_sentiment={use_pit_sentiment} | regime={use_regime}")
+        dm, fd, bench = build_real_dataset(codes, "20220101", "20251231")
+        regime = MarketRegime(bench) if use_regime else None
+        hs300_risk = RiskManager(
+            stop_loss_pct=-0.10, max_drawdown_pct=-0.20, max_positions=30,
+        )
+        strategy = MultiFactorDMIStrategy(
+            initial_capital=1_000_000, top_n=15, factor_weights=factor_weights,
+            risk_manager=hs300_risk, sentiment_monitor=SentimentMonitor(use_real_data=False),
+            rebalance_freq=20, use_real_data=True,
+            use_point_in_time_sentiment=use_pit_sentiment,
+            use_regime=use_regime, regime=regime,
+        )
         result = strategy.run_backtest(
-            stock_codes=stock_codes,
-            start_date="20240101",
-            end_date="20241231",
-            # 基本面因子接入真实数据：PE/PB 来自 stock_value_em，ROE 来自同花顺财务摘要
+            data_map=dm, fundamental_data=fd, start_date="20220101", end_date="20251231",
+        )
+        wf = strategy.walk_forward_validation(dm, fd, bench, "20220101", "20251231", n_folds=5)
+
+        print("\n" + "=" * 60)
+        print("Walk-forward 样本外分段统计")
+        print("=" * 60)
+        print(f"{'段':>3} {'区间':<24} {'收益':>10} {'年化':>10} {'夏普':>7} {'回撤':>9}")
+        for f in wf["folds"]:
+            print(f"{f['fold']:>3} {f['start'][:10]}~{f['end'][:10]} "
+                  f"{f['total_return']:>10.2%} {f['annual_return']:>10.2%} "
+                  f"{f['sharpe']:>7.2f} {f['max_drawdown']:>9.2%}")
+        o = wf["overall"]
+        print("-" * 60)
+        print(f"{'OOS':>3} {'整体':<24} {o['total_return']:>10.2%} {o['annual_return']:>10.2%} "
+              f"{o['sharpe']:>7.2f} {o['max_drawdown']:>9.2%}")
+        return result, wf
+
+    if use_westock_real:
+        # —— 真实数据接入回测：确定性 mock K线 + 真实基本面 + 真实资金流舆情 ——
+        logger.info("真实数据接入回测（腾讯自选股 westock-mcp）：确定性 mock K线 + 真实基本面 + 真实资金流舆情")
+        from data_source import DataSourceManager
+        dm = DataSourceManager(use_real_data=True, use_westock_real=True, cache_dir=CACHE)
+        sm = SentimentMonitor(use_real_data=True, use_westock_real=True, cache_dir=CACHE)
+
+        # 确定性 mock K线（结构可复现，不与网络强耦合）
+        data_map = generate_mock_data(stock_codes)
+
+        # 真实基本面：读取 westock 衍生缓存，并 REINDEX 到 K线交易日
+        # （与 fetch_stock_data 同口径：ffill/bfill 兜底，保证 _rebalance 命中）。
+        # 注意：真实基本面为单一最新报告期，对历史再平衡日属前瞻，仅用于验证接入。
+        fundamental_data = {}
+        for c in stock_codes:
+            f = dm.fetch_fundamental(c)
+            if f is not None and not f.empty:
+                f = f.reindex(data_map[c].index).ffill().bfill()
+                fundamental_data[c] = f
+
+        strategy = MultiFactorDMIStrategy(
+            initial_capital=1_000_000, top_n=5, factor_weights=factor_weights,
+            risk_manager=risk_manager, sentiment_monitor=sm,
+            rebalance_freq=20, use_real_data=True, data_source=dm,
+        )
+        result = strategy.run_backtest(
+            data_map=data_map, fundamental_data=fundamental_data,
+            start_date="20230101", end_date="20241231",
+        )
+    elif use_real:
+        logger.info("使用 AKShare 真实行情进行回测（2024 全年，含真实基本面因子）")
+        strategy = MultiFactorDMIStrategy(
+            initial_capital=1_000_000, top_n=5, factor_weights=factor_weights,
+            risk_manager=risk_manager, sentiment_monitor=SentimentMonitor(use_real_data=False),
+            rebalance_freq=20, use_real_data=True,
+        )
+        result = strategy.run_backtest(
+            stock_codes=stock_codes, start_date="20240101", end_date="20241231",
             fetch_fundamental=True,
         )
     else:
+        strategy = MultiFactorDMIStrategy(
+            initial_capital=1_000_000, top_n=5, factor_weights=factor_weights,
+            risk_manager=risk_manager, sentiment_monitor=SentimentMonitor(use_real_data=False),
+            rebalance_freq=20, use_real_data=False,
+        )
         data_map = generate_mock_data(stock_codes)
         result = strategy.run_backtest(data_map)
-    
+
     # 输出结果
     print("\n" + "=" * 60)
     print("回测结果")
     print("=" * 60)
     print(result.to_string(index=False))
-    
+
     # 输出交易记录
     print("\n" + "=" * 60)
     print("交易记录")
@@ -1265,11 +1738,24 @@ def main(use_real: bool = False):
     for trade in strategy.trade_log[:20]:  # 只打印前 20 条
         print(f"{trade.code} | 买入: {trade.buy_price:.2f} -> 卖出: {trade.sell_price:.2f} | "
               f"收益率: {trade.pnl_pct:.2%} | 原因: {trade.reason}")
-    
+
     return result
 
 
 if __name__ == "__main__":
     import sys
     use_real = "--real" in sys.argv
-    main(use_real=use_real)
+    use_westock_real = "--westock" in sys.argv
+    use_real_hs300 = "--real-hs300" in sys.argv
+    use_pit_sentiment = "--pit-sentiment" in sys.argv
+    use_regime = "--regime" in sys.argv
+    # --hs300-limit N
+    hs300_limit = None
+    if "--hs300-limit" in sys.argv:
+        try:
+            hs300_limit = int(sys.argv[sys.argv.index("--hs300-limit") + 1])
+        except (IndexError, ValueError):
+            hs300_limit = None
+    main(use_real=use_real, use_westock_real=use_westock_real,
+         use_real_hs300=use_real_hs300, use_pit_sentiment=use_pit_sentiment,
+         use_regime=use_regime, hs300_limit=hs300_limit)

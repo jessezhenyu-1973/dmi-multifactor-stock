@@ -18,8 +18,21 @@ from datetime import datetime, timedelta
 import logging
 import time
 import os
+import zlib
 
 logger = logging.getLogger(__name__)
+
+
+def _stable_seed(s: str) -> int:
+    """
+    跨进程稳定的随机种子。
+
+    Python 内置 hash() 对 str/bytes 默认带随机盐（PYTHONHASHSEED），
+    同一段字符串在不同进程里 hash 值不同，不能用于复现性。这里改用
+    zlib.crc32（Python3 中保证返回无符号 32 位整数），保证 mock 数据
+    跨进程/跨运行完全一致，符合策略「可复现性铁律」。
+    """
+    return zlib.crc32(s.encode("utf-8")) & 0xFFFFFFFF
 
 
 # ============================================================
@@ -136,12 +149,13 @@ class AKShareDataSource:
             end_date = datetime.now().strftime("%Y%m%d")
         
         df = None
-        # 主源：腾讯接口（在部分网络环境下比东财更稳定）
+        # 主源：腾讯接口（仅支持日线；周/月线腾讯无对应接口，直接走东财兜底）
         tcode = ('sh' if symbol.startswith('6') else 'sz') + symbol
-        try:
-            df = self._call_ak(self.ak.stock_zh_a_daily, symbol=tcode, adjust=adjust)
-        except Exception as e:
-            logger.warning(f"腾讯接口获取 {stock_code} 失败: {e}")
+        if period == "daily":
+            try:
+                df = self._call_ak(self.ak.stock_zh_a_daily, symbol=tcode, adjust=adjust)
+            except Exception as e:
+                logger.warning(f"腾讯接口获取 {stock_code} 失败: {e}")
         
         # 兜底：东财接口
         if df is None or df.empty:
@@ -359,40 +373,77 @@ class TDXDataSource:
     
     def __init__(self):
         self.tdx_available = False
+        self._connected = False
+        self.api = None
         try:
             from pytdx.hq import TdxHq_API
             self.api = TdxHq_API()
             self.tdx_available = True
-            # 连接通达信服务器
-            self.api.connect('119.147.212.81', 7709)  # 默认服务器
-            logger.info("通达信 pytdx 加载成功")
+            logger.info("通达信 pytdx 已加载（懒连接：首次抓取时才连服务器）")
         except ImportError:
             logger.warning("pytdx 未安装，请运行: pip install pytdx")
-        except Exception as e:
-            logger.warning(f"通达信连接失败: {e}")
+
+    def _ensure_connected(self) -> bool:
+        """
+        懒连接：仅在实际需要抓取 K 线时才连服务器，避免无谓阻塞/报错。
+        多服务器轮询，提升连通率；连接成功置 _connected 避免重复连。
+        """
+        if not self.tdx_available or self.api is None:
+            return False
+        if self._connected:
+            return True
+        for host, port in [
+            ('119.147.212.81', 7709),
+            ('120.24.0.77', 7709),
+            ('47.107.75.142', 7709),
+            ('101.227.73.20', 7709),
+        ]:
+            try:
+                if self.api.connect(host, port):
+                    self._connected = True
+                    logger.info(f"通达信已连接 {host}:{port}")
+                    return True
+            except Exception as e:
+                logger.warning(f"通达信连接 {host}:{port} 失败: {e}")
+        logger.warning("通达信所有服务器均连接失败")
+        return False
     
     def fetch_kline(
         self,
         stock_code: str,
         start_date: str = "20230101",
         end_date: str = "",
-        kline_type: int = 9  # 9=日线
+        period: str = "daily",
+        adjust: str = ""
     ) -> Optional[pd.DataFrame]:
         """
         获取个股 K 线数据
-        
+
         Args:
             stock_code: 完整代码（如 '000001' 或 '600000'）
-            start_date: 开始日期
-            end_date: 结束日期
-            kline_type: K 线类型 0=5分钟, 1=15分钟, 2=30分钟, 3=1小时, 8=周线, 9=日线
-        
+            start_date: 开始日期 YYYYMMDD
+            end_date: 结束日期 YYYYMMDD
+            period: K 线周期 'daily'/'weekly'/'monthly'（其余映射为日线）
+            adjust: 复权方式。注意 pytdx 原生不支持复权，非 '' 时仅警告并
+                    返回原始（未复权）数据，可能破坏 hfq 复现纪律；
+                    回测请优先用 AKShare 的 hfq 源。
+
         Returns:
             DataFrame
         """
-        if not self.tdx_available:
+        if not self._ensure_connected():
             return None
-        
+
+        # 周期映射（pytdx 不支持复权，adjust 非空时退化为原始数据）
+        kline_type_map = {"daily": 9, "weekly": 8, "monthly": 6,
+                          "60min": 3, "30min": 2, "15min": 1, "5min": 0}
+        kline_type = kline_type_map.get(period, 9)
+        if adjust in ("hfq", "qfq"):
+            logger.warning(
+                f"通达信不支持复权，{stock_code} 返回原始（未复权）K线，"
+                f"可能破坏 hfq 复现纪律；建议优先使用 AKShare 源"
+            )
+
         try:
             # 解析市场（去除交易所后缀）
             raw_code = stock_code.split('.')[0]
@@ -400,11 +451,11 @@ class TDXDataSource:
                 market = 1  # 上海
             else:
                 market = 0  # 深圳
-            
-            # 获取 K 线（每次最多 800 条）
+
+            # 获取 K 线（每次最多 800 条，向后翻页直到取完）
             all_data = []
             start_pos = 0
-            
+
             while True:
                 data = self.api.get_security_bars(
                     category=kline_type,
@@ -413,30 +464,30 @@ class TDXDataSource:
                     start=start_pos,
                     count=800
                 )
-                
+
                 if not data or len(data) == 0:
                     break
-                
+
                 all_data.extend(data)
                 start_pos += len(data)
-                
+
                 if len(data) < 800:
                     break
-            
+
             if not all_data:
                 return None
-            
+
             df = pd.DataFrame(all_data)
             df['datetime'] = pd.to_datetime(df['datetime'])
-            
-            # 日期过滤
+
+            # 日期过滤（start_date/end_date 为 YYYYMMDD 字符串，pandas 可比较）
             if start_date:
-                df = df[df['datetime'] >= start_date]
+                df = df[df['datetime'] >= pd.Timestamp(start_date)]
             if end_date:
-                df = df[df['datetime'] <= end_date]
-            
+                df = df[df['datetime'] <= pd.Timestamp(end_date)]
+
             df.set_index('datetime', inplace=True)
-            
+
             # 重命名列
             df = df.rename(columns={
                 'open': 'open',
@@ -446,20 +497,21 @@ class TDXDataSource:
                 'vol': 'volume',
                 'amount': 'amount',
             })
-            
+
             return df
-            
+
         except Exception as e:
             logger.error(f"通达信获取 {stock_code} K 线失败: {e}")
             return None
-    
+
     def close(self):
         """关闭连接"""
-        if self.tdx_available:
+        if self._connected and self.api is not None:
             try:
                 self.api.disconnect()
-            except:
+            except Exception:
                 pass
+            self._connected = False
 
 
 # ============================================================
@@ -473,13 +525,33 @@ class DataSourceManager:
     优先级：AKShare > 通达信 > 模拟数据
     """
     
-    def __init__(self, use_real_data: bool = True, cache_dir: Optional[str] = None):
+    def __init__(self, use_real_data: bool = True, cache_dir: Optional[str] = None,
+                 use_westock_real: bool = False):
         self.use_real_data = use_real_data
         self.cache_dir = cache_dir
+        # 真实基本面/资金流接入开关（腾讯自选股 westock-mcp）：仅当显式开启且本地缓存
+        # {code}_realfund.csv 存在时才读真实数据，否则走 AKShare/通达信/mock，基线零风险。
+        self.use_westock_real = use_westock_real
         self.ak_source = AKShareDataSource(cache_dir=cache_dir) if use_real_data else None
         self.tdx_source = TDXDataSource() if use_real_data else None
         self.primary_source = self.ak_source or self.tdx_source
-    
+
+    # ---------- 真实基本面/资金流 本地缓存读取（westock-mcp 写入，引擎只读） ----------
+    def _load_real_cache(self, kind: str, symbol: str) -> Optional[pd.DataFrame]:
+        """读取真实数据缓存 CSV（{symbol}_{kind}.csv），索引为日期；不存在返回 None。"""
+        if not self.cache_dir:
+            return None
+        import os
+        p = os.path.join(self.cache_dir, f"{symbol}_{kind}.csv")
+        if os.path.exists(p):
+            try:
+                df = pd.read_csv(p, index_col=0, parse_dates=True)
+                if not df.empty:
+                    return df
+            except Exception as e:
+                logger.warning(f"读取真实缓存失败 {p}: {e}")
+        return None
+
     def fetch_kline(
         self,
         stock_code: str,
@@ -493,8 +565,6 @@ class DataSourceManager:
         """
         if not self.use_real_data:
             return self._generate_mock_kline(stock_code)
-        
-        # 尝试 AKShare
         if self.ak_source:
             df = self.ak_source.fetch_kline(stock_code, start_date, end_date, period, adjust)
             if df is not None and not df.empty:
@@ -503,7 +573,7 @@ class DataSourceManager:
         
         # 尝试通达信
         if self.tdx_source:
-            df = self.tdx_source.fetch_kline(stock_code, start_date, end_date)
+            df = self.tdx_source.fetch_kline(stock_code, start_date, end_date, period, adjust)
             if df is not None and not df.empty:
                 logger.info(f"通达信获取 {stock_code} K 线成功，共 {len(df)} 条")
                 return df
@@ -521,12 +591,20 @@ class DataSourceManager:
         """获取基本面数据（自动降级）"""
         if not self.use_real_data:
             return self._generate_mock_fundamental(stock_code)
-        
+
+        # 真实基本面（腾讯自选股 westock-mcp）：本地缓存 {code}_realfund.csv
+        # 含 pe/pb/roe/gross_margin/debt_ratio，优先于 AKShare 使用（已联网验证真实）
+        if self.use_westock_real:
+            real = self._load_real_cache('realfund', stock_code)
+            if real is not None and not real.empty:
+                logger.info(f"真实基本面(westock)命中: {stock_code}")
+                return real
+
         if self.ak_source:
             df = self.ak_source.fetch_fundamental(stock_code, start_date, end_date)
             if df is not None:
                 return df
-        
+
         return self._generate_mock_fundamental(stock_code)
     
     def fetch_sentiment(self, stock_code: str, date: str) -> float:
@@ -551,7 +629,7 @@ class DataSourceManager:
     
     def _generate_mock_kline(self, stock_code: str) -> pd.DataFrame:
         """生成模拟 K 线数据（兜底）"""
-        np.random.seed(hash(stock_code) % (2**32))
+        np.random.seed(_stable_seed(stock_code))
         dates = pd.bdate_range("2023-01-01", "2024-12-31")
         n = len(dates)
         
@@ -572,7 +650,7 @@ class DataSourceManager:
     
     def _generate_mock_fundamental(self, stock_code: str) -> pd.DataFrame:
         """生成模拟基本面数据（兜底）"""
-        np.random.seed(hash(stock_code + "fund") % (2**32))
+        np.random.seed(_stable_seed(stock_code + "fund"))
         dates = pd.bdate_range("2023-01-01", "2024-12-31")
         n = len(dates)
         
@@ -584,7 +662,7 @@ class DataSourceManager:
     
     def _generate_mock_sentiment(self, stock_code: str, date: str) -> float:
         """生成模拟舆情数据（兜底）"""
-        np.random.seed(hash(stock_code + date) % (2**32))
+        np.random.seed(_stable_seed(stock_code + date))
         return np.random.uniform(-0.5, 0.5)
     
     def close(self):
