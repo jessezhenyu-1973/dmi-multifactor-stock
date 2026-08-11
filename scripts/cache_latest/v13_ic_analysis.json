@@ -1,0 +1,19 @@
+{
+  "total_data_points": 4163,
+  "in_sample_start": "2022-01-01",
+  "in_sample_end": "2023-12-31",
+  "factors": {
+    "momentum_60": -0.1092,
+    "momentum_120": -0.0909,
+    "volume_ratio": 0.0903,
+    "adx": 0.0813,
+    "rsi": 0.068,
+    "pdi": 0.0541,
+    "momentum_20": 0.0359,
+    "price_above_ma20": 0.0338,
+    "price_above_ma5": 0.0321,
+    "momentum_5": 0.0281,
+    "ndi": 0.0098,
+    "price_above_ma60": 0.0097
+  }
+}

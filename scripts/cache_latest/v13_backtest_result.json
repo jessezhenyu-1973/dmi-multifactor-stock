@@ -1,0 +1,299 @@
+{
+  "v13_backtest": true,
+  "v10_v11_falsified": true,
+  "falsification_reasons": [
+    "零卖出 = 买入持有",
+    "市场状态切换从未触发",
+    "样本内同段优化同段报告",
+    "仅 49 只股票非全量"
+  ],
+  "hs300_full_pool": 50,
+  "in_sample_ics": {
+    "momentum_60": -0.1092,
+    "momentum_120": -0.0909,
+    "volume_ratio": 0.0903,
+    "adx": 0.0813,
+    "rsi": 0.068,
+    "pdi": 0.0541,
+    "momentum_20": 0.0359,
+    "price_above_ma20": 0.0338,
+    "price_above_ma5": 0.0321,
+    "momentum_5": 0.0281,
+    "ndi": 0.0098,
+    "price_above_ma60": 0.0097
+  },
+  "fit_window": {
+    "基准 (低频)": {
+      "total_return": -39.1805,
+      "sharpe_ratio": -0.8932,
+      "max_drawdown": -53.1246,
+      "buy_count": 19,
+      "sell_count": 19,
+      "n_stocks": 50,
+      "vol_parity": false,
+      "regime_risk": false,
+      "name": "基准 (低频)"
+    },
+    "+vol_parity": {
+      "total_return": -39.1805,
+      "sharpe_ratio": -0.8932,
+      "max_drawdown": -53.1246,
+      "buy_count": 19,
+      "sell_count": 19,
+      "n_stocks": 50,
+      "vol_parity": true,
+      "regime_risk": false,
+      "name": "+vol_parity"
+    },
+    "+regime_risk": {
+      "total_return": -39.1805,
+      "sharpe_ratio": -0.8932,
+      "max_drawdown": -53.1246,
+      "buy_count": 19,
+      "sell_count": 19,
+      "n_stocks": 50,
+      "vol_parity": false,
+      "regime_risk": true,
+      "name": "+regime_risk"
+    },
+    "+vol_parity+regime": {
+      "total_return": -39.1805,
+      "sharpe_ratio": -0.8932,
+      "max_drawdown": -53.1246,
+      "buy_count": 19,
+      "sell_count": 19,
+      "n_stocks": 50,
+      "vol_parity": true,
+      "regime_risk": true,
+      "name": "+vol_parity+regime"
+    },
+    "基准 (高频)": {
+      "total_return": -30.792,
+      "sharpe_ratio": 0.1378,
+      "max_drawdown": -54.4437,
+      "buy_count": 33,
+      "sell_count": 33,
+      "n_stocks": 50,
+      "vol_parity": false,
+      "regime_risk": false,
+      "name": "基准 (高频)"
+    },
+    "+vol_parity (高频)": {
+      "total_return": -30.792,
+      "sharpe_ratio": 0.1378,
+      "max_drawdown": -54.4437,
+      "buy_count": 33,
+      "sell_count": 33,
+      "n_stocks": 50,
+      "vol_parity": true,
+      "regime_risk": false,
+      "name": "+vol_parity (高频)"
+    },
+    "+regime_risk (高频)": {
+      "total_return": -30.792,
+      "sharpe_ratio": 0.1378,
+      "max_drawdown": -54.4437,
+      "buy_count": 33,
+      "sell_count": 33,
+      "n_stocks": 50,
+      "vol_parity": false,
+      "regime_risk": true,
+      "name": "+regime_risk (高频)"
+    },
+    "+vol_parity+regime (高频)": {
+      "total_return": -30.792,
+      "sharpe_ratio": 0.1378,
+      "max_drawdown": -54.4437,
+      "buy_count": 33,
+      "sell_count": 33,
+      "n_stocks": 50,
+      "vol_parity": true,
+      "regime_risk": true,
+      "name": "+vol_parity+regime (高频)"
+    }
+  },
+  "holdout_results": {
+    "基准 (低频)": {
+      "total_return": -15.5952,
+      "sharpe_ratio": -0.0878,
+      "max_drawdown": -33.1903,
+      "buy_count": 72,
+      "sell_count": 63,
+      "n_stocks": 50,
+      "vol_parity": false,
+      "regime_risk": false,
+      "name": "基准 (低频)"
+    },
+    "+vol_parity": {
+      "total_return": -15.5952,
+      "sharpe_ratio": -0.0878,
+      "max_drawdown": -33.1903,
+      "buy_count": 72,
+      "sell_count": 63,
+      "n_stocks": 50,
+      "vol_parity": true,
+      "regime_risk": false,
+      "name": "+vol_parity"
+    },
+    "+regime_risk": {
+      "total_return": -15.5952,
+      "sharpe_ratio": -0.0878,
+      "max_drawdown": -33.1903,
+      "buy_count": 72,
+      "sell_count": 63,
+      "n_stocks": 50,
+      "vol_parity": false,
+      "regime_risk": true,
+      "name": "+regime_risk"
+    },
+    "+vol_parity+regime": {
+      "total_return": -15.5952,
+      "sharpe_ratio": -0.0878,
+      "max_drawdown": -33.1903,
+      "buy_count": 72,
+      "sell_count": 63,
+      "n_stocks": 50,
+      "vol_parity": true,
+      "regime_risk": true,
+      "name": "+vol_parity+regime"
+    },
+    "基准 (高频)": {
+      "total_return": -20.99,
+      "sharpe_ratio": -0.2019,
+      "max_drawdown": -35.2755,
+      "buy_count": 136,
+      "sell_count": 135,
+      "n_stocks": 50,
+      "vol_parity": false,
+      "regime_risk": false,
+      "name": "基准 (高频)"
+    },
+    "+vol_parity (高频)": {
+      "total_return": -20.99,
+      "sharpe_ratio": -0.2019,
+      "max_drawdown": -35.2755,
+      "buy_count": 136,
+      "sell_count": 135,
+      "n_stocks": 50,
+      "vol_parity": true,
+      "regime_risk": false,
+      "name": "+vol_parity (高频)"
+    },
+    "+regime_risk (高频)": {
+      "total_return": -20.99,
+      "sharpe_ratio": -0.2019,
+      "max_drawdown": -35.2755,
+      "buy_count": 136,
+      "sell_count": 135,
+      "n_stocks": 50,
+      "vol_parity": false,
+      "regime_risk": true,
+      "name": "+regime_risk (高频)"
+    },
+    "+vol_parity+regime (高频)": {
+      "total_return": -20.99,
+      "sharpe_ratio": -0.2019,
+      "max_drawdown": -35.2755,
+      "buy_count": 136,
+      "sell_count": 135,
+      "n_stocks": 50,
+      "vol_parity": true,
+      "regime_risk": true,
+      "name": "+vol_parity+regime (高频)"
+    }
+  },
+  "walkforward_results": {
+    "基准 (低频)": {
+      "composite_return": 143.4109607460057,
+      "avg_fold_sharpe": 0.8356999999999999,
+      "fold_returns": [
+        60.8225,
+        6.1775,
+        22.4298,
+        24.4184,
+        -6.4187
+      ]
+    },
+    "+vol_parity": {
+      "composite_return": 143.4109607460057,
+      "avg_fold_sharpe": 0.8356999999999999,
+      "fold_returns": [
+        60.8225,
+        6.1775,
+        22.4298,
+        24.4184,
+        -6.4187
+      ]
+    },
+    "+regime_risk": {
+      "composite_return": 143.4109607460057,
+      "avg_fold_sharpe": 0.8356999999999999,
+      "fold_returns": [
+        60.8225,
+        6.1775,
+        22.4298,
+        24.4184,
+        -6.4187
+      ]
+    },
+    "+vol_parity+regime": {
+      "composite_return": 143.4109607460057,
+      "avg_fold_sharpe": 0.8356999999999999,
+      "fold_returns": [
+        60.8225,
+        6.1775,
+        22.4298,
+        24.4184,
+        -6.4187
+      ]
+    },
+    "基准 (高频)": {
+      "composite_return": 55.05404947529251,
+      "avg_fold_sharpe": 0.6161000000000001,
+      "fold_returns": [
+        -14.1,
+        12.6435,
+        45.0976,
+        16.7775,
+        -5.4276
+      ]
+    },
+    "+vol_parity (高频)": {
+      "composite_return": 55.05404947529251,
+      "avg_fold_sharpe": 0.6161000000000001,
+      "fold_returns": [
+        -14.1,
+        12.6435,
+        45.0976,
+        16.7775,
+        -5.4276
+      ]
+    },
+    "+regime_risk (高频)": {
+      "composite_return": 55.05404947529251,
+      "avg_fold_sharpe": 0.6161000000000001,
+      "fold_returns": [
+        -14.1,
+        12.6435,
+        45.0976,
+        16.7775,
+        -5.4276
+      ]
+    },
+    "+vol_parity+regime (高频)": {
+      "composite_return": 55.05404947529251,
+      "avg_fold_sharpe": 0.6161000000000001,
+      "fold_returns": [
+        -14.1,
+        12.6435,
+        45.0976,
+        16.7775,
+        -5.4276
+      ]
+    }
+  },
+  "conclusion": {
+    "wf_oos_best_sharpe": 0.8357,
+    "has_robust_alpha": true
+  }
+}
