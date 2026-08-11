@@ -1,0 +1,44 @@
+{
+  "v12_backtest": true,
+  "v10_v11_falsified": true,
+  "falsification_reasons": [
+    "零卖出 = 买入持有",
+    "市场状态切换从未触发",
+    "样本内同段优化同段报告",
+    "仅 49 只股票非全量"
+  ],
+  "new_factors": {
+    "A_technical": "DMI, 动量, 均线, RSI, 成交量",
+    "B_fundamental": "ROE proxy, 毛利率 proxy, 营收增速 proxy, 净利增速 proxy",
+    "C_valuation": "PE proxy (价格位置分位), PB proxy (价格/长期均价), PEG proxy",
+    "D_moneyflow": "主力资金净流入 proxy, 北向资金变化 proxy, 换手率变化"
+  },
+  "resonance_mechanism": {
+    "description": "独立类别投票，≥2 类同向触发",
+    "strong_categories_threshold": 0.6
+  },
+  "in_sample_ics": {
+    "northbound_proxy": 0.1226,
+    "momentum_60": -0.1092,
+    "momentum_120": -0.0909,
+    "volume_ratio": 0.0903,
+    "adx": 0.0813,
+    "turnover_ratio": 0.0747,
+    "rsi": 0.068,
+    "pdi": 0.0541,
+    "momentum_20": 0.0359,
+    "pb_proxy": 0.0343,
+    "price_above_ma20": 0.0338,
+    "price_above_ma5": 0.0321,
+    "gross_margin_proxy": 0.0312,
+    "momentum_5": 0.0281,
+    "roe_proxy": -0.0268
+  },
+  "fit_window": {},
+  "holdout_results": {},
+  "walkforward_results": {},
+  "conclusion": {
+    "wf_oos_best_sharpe": null,
+    "has_robust_alpha": false
+  }
+}
