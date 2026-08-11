@@ -1,0 +1,168 @@
+{
+  "best_params": {
+    "weights": {
+      "dmi": 2.0,
+      "momentum": 1.0,
+      "ma": 1.5,
+      "rsi": 1.0,
+      "volume": 1.0,
+      "price_pos": 1.0
+    },
+    "sharpe_ratio": 1.8947,
+    "total_return": 34.1186,
+    "max_drawdown": -9.6618
+  },
+  "top_10": [
+    {
+      "weights": {
+        "dmi": 2.0,
+        "momentum": 1.0,
+        "ma": 1.5,
+        "rsi": 1.0,
+        "volume": 1.0,
+        "price_pos": 1.0
+      },
+      "sharpe_ratio": 1.8947,
+      "total_return": 34.1186,
+      "max_drawdown": -9.6618
+    },
+    {
+      "weights": {
+        "dmi": 2.5,
+        "momentum": 1.5,
+        "ma": 1.0,
+        "rsi": 1.0,
+        "volume": 1.0,
+        "price_pos": 1.0
+      },
+      "sharpe_ratio": 1.8218,
+      "total_return": 30.7928,
+      "max_drawdown": -9.6913
+    },
+    {
+      "weights": {
+        "dmi": 2.5,
+        "momentum": 1.5,
+        "ma": 1.5,
+        "rsi": 1.0,
+        "volume": 1.0,
+        "price_pos": 1.0
+      },
+      "sharpe_ratio": 1.7486,
+      "total_return": 30.0953,
+      "max_drawdown": -9.6918
+    },
+    {
+      "weights": {
+        "dmi": 2.0,
+        "momentum": 1.5,
+        "ma": 1.5,
+        "rsi": 1.0,
+        "volume": 1.0,
+        "price_pos": 1.0
+      },
+      "sharpe_ratio": 1.7168,
+      "total_return": 30.0543,
+      "max_drawdown": -9.4887
+    },
+    {
+      "weights": {
+        "dmi": 2.5,
+        "momentum": 1.0,
+        "ma": 1.5,
+        "rsi": 1.0,
+        "volume": 1.0,
+        "price_pos": 1.0
+      },
+      "sharpe_ratio": 1.6393,
+      "total_return": 28.1886,
+      "max_drawdown": -13.6561
+    },
+    {
+      "weights": {
+        "dmi": 2.5,
+        "momentum": 1.0,
+        "ma": 1.0,
+        "rsi": 1.0,
+        "volume": 1.0,
+        "price_pos": 1.0
+      },
+      "sharpe_ratio": 1.572,
+      "total_return": 26.1712,
+      "max_drawdown": -13.6564
+    },
+    {
+      "weights": {
+        "dmi": 2.0,
+        "momentum": 1.0,
+        "ma": 1.0,
+        "rsi": 1.0,
+        "volume": 1.0,
+        "price_pos": 1.0
+      },
+      "sharpe_ratio": 1.4789,
+      "total_return": 25.1106,
+      "max_drawdown": -14.3823
+    },
+    {
+      "weights": {
+        "dmi": 2.0,
+        "momentum": 1.5,
+        "ma": 1.0,
+        "rsi": 1.0,
+        "volume": 1.0,
+        "price_pos": 1.0
+      },
+      "sharpe_ratio": 1.3601,
+      "total_return": 22.3247,
+      "max_drawdown": -11.8807
+    }
+  ],
+  "total_combinations": 8,
+  "search_space": {
+    "dmi": [
+      2.0,
+      2.5
+    ],
+    "momentum": [
+      1.0,
+      1.5
+    ],
+    "ma": [
+      1.0,
+      1.5
+    ],
+    "rsi": [
+      1.0
+    ],
+    "volume": [
+      1.0
+    ],
+    "price_pos": [
+      1.0
+    ]
+  },
+  "regime_params": {
+    "bull": {
+      "signal_threshold": 3,
+      "stop_loss": -0.08,
+      "take_profit": 0.18,
+      "max_hold_days": 70,
+      "max_positions": 3
+    },
+    "neutral": {
+      "signal_threshold": 3,
+      "stop_loss": -0.06,
+      "take_profit": 0.15,
+      "max_hold_days": 60,
+      "max_positions": 3
+    },
+    "bear": {
+      "signal_threshold": 4,
+      "stop_loss": -0.04,
+      "take_profit": 0.1,
+      "max_hold_days": 45,
+      "max_positions": 2
+    }
+  }
+}

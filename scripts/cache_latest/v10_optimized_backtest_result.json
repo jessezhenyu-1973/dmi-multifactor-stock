@@ -1,0 +1,35 @@
+{
+  "strategy": "V10 Optimized with Grid Search + Market Regime",
+  "total_return": 34.1186,
+  "annual_return": 26.1655,
+  "sharpe_ratio": 1.8947,
+  "max_drawdown": -9.6618,
+  "win_rate": 45.81,
+  "total_trading_days": 310,
+  "total_stocks": 49,
+  "bull_days": 0,
+  "bear_days": 0,
+  "neutral_days": 0,
+  "data_source": "MCP + 网格搜索 + 市场状态切换",
+  "backtest_period": "2025-05-07 ~ 2026-08-11",
+  "total_trades": 47,
+  "buy_count": 47,
+  "sell_count": 0,
+  "best_params": {
+    "weights": {
+      "dmi": 2.0,
+      "momentum": 1.0,
+      "ma": 1.5,
+      "rsi": 1.0,
+      "volume": 1.0,
+      "price_pos": 1.0
+    },
+    "sharpe_ratio": 1.8947,
+    "total_return": 34.1186,
+    "max_drawdown": -9.6618
+  },
+  "param_search": {
+    "total_combinations": 8,
+    "best_sharpe": 1.8947
+  }
+}
