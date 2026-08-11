@@ -1,0 +1,70 @@
+{
+  "feature_ic": {
+    "pdi_gt_ndi": -0.053121329444066744,
+    "adx_rising": 0.012827153446402492,
+    "adx_strong": 0.07115499686831696,
+    "momentum_20": 0.036805260744588966,
+    "momentum_60": -0.07543936228667314,
+    "momentum_120": -0.11620374230998194,
+    "momentum_consistent": -0.02757525098861437,
+    "price_above_ma5": 0.013705776592617281,
+    "price_above_ma20": -0.014521097792780034,
+    "price_above_ma60": -0.028727234422818698,
+    "ma_bullish": -0.027937590941942547,
+    "rsi": 0.026354060004893903,
+    "rsi_oversold": 0.03449423716200474,
+    "rsi_not_overbought": -0.08956544383305111,
+    "vol_expanding": 0.04323750274828355,
+    "vol_sustained": 0.07013683269384602,
+    "volatility_20": -0.00990689322997232,
+    "volatility_60": -0.03169595721291678,
+    "price_position_20": 0.013937221087609595,
+    "price_position_60": -0.009992872427210087,
+    "price_position_120": -0.05713561765134892
+  },
+  "top_10": [
+    {
+      "feature": "momentum_120",
+      "ic": -0.11620374230998194
+    },
+    {
+      "feature": "rsi_not_overbought",
+      "ic": -0.08956544383305111
+    },
+    {
+      "feature": "momentum_60",
+      "ic": -0.07543936228667314
+    },
+    {
+      "feature": "adx_strong",
+      "ic": 0.07115499686831696
+    },
+    {
+      "feature": "vol_sustained",
+      "ic": 0.07013683269384602
+    },
+    {
+      "feature": "price_position_120",
+      "ic": -0.05713561765134892
+    },
+    {
+      "feature": "pdi_gt_ndi",
+      "ic": -0.053121329444066744
+    },
+    {
+      "feature": "vol_expanding",
+      "ic": 0.04323750274828355
+    },
+    {
+      "feature": "momentum_20",
+      "ic": 0.036805260744588966
+    },
+    {
+      "feature": "rsi_oversold",
+      "ic": 0.03449423716200474
+    }
+  ],
+  "max_abs_ic": 0.11620374230998194,
+  "n_samples": 2903,
+  "conclusion": "Weak signal"
+}

@@ -1,0 +1,473 @@
+{
+  "honest_conclusion": "No robust alpha - all |IC| < 0.05",
+  "v10_v11_disproved": {
+    "total_return_v10": 34.12,
+    "total_return_v11": 34.57,
+    "issues": [
+      "零卖出 = 买入持有，不是真策略",
+      "市场状态切换从未触发",
+      "样本内同段优化同段报告",
+      "仅 49 只股票非全量"
+    ]
+  },
+  "ic_analysis": {
+    "max_abs_ic": 0.11620374230998194,
+    "conclusion": "All factor IC ≈ 0, no robust signal",
+    "top_10": [
+      {
+        "feature": "momentum_120",
+        "ic": -0.1162
+      },
+      {
+        "feature": "rsi_not_overbought",
+        "ic": -0.0896
+      },
+      {
+        "feature": "momentum_60",
+        "ic": -0.0754
+      },
+      {
+        "feature": "adx_strong",
+        "ic": 0.0712
+      },
+      {
+        "feature": "vol_sustained",
+        "ic": 0.0701
+      },
+      {
+        "feature": "price_position_120",
+        "ic": -0.0571
+      },
+      {
+        "feature": "pdi_gt_ndi",
+        "ic": -0.0531
+      },
+      {
+        "feature": "vol_expanding",
+        "ic": 0.0432
+      },
+      {
+        "feature": "momentum_20",
+        "ic": 0.0368
+      },
+      {
+        "feature": "rsi_oversold",
+        "ic": 0.0345
+      }
+    ]
+  },
+  "fit_window_results": {
+    "基准": {
+      "total_return": 13.1412,
+      "annual_return": 6.4223,
+      "sharpe_ratio": 0.6035,
+      "max_drawdown": -8.5703,
+      "win_rate": 43.6,
+      "total_trading_days": 484,
+      "total_trades": 82,
+      "buy_count": 78,
+      "sell_count": 4,
+      "buy_sell_ratio": 19.5,
+      "final_positions": 6,
+      "regime_used": false,
+      "vol_parity_used": false
+    },
+    "+vol_parity": {
+      "total_return": 30.7468,
+      "annual_return": 14.4717,
+      "sharpe_ratio": 0.9982,
+      "max_drawdown": -8.7811,
+      "win_rate": 44.42,
+      "total_trading_days": 484,
+      "total_trades": 82,
+      "buy_count": 78,
+      "sell_count": 4,
+      "buy_sell_ratio": 19.5,
+      "final_positions": 6,
+      "regime_used": false,
+      "vol_parity_used": true
+    },
+    "+regime_risk": {
+      "total_return": 13.1412,
+      "annual_return": 6.4223,
+      "sharpe_ratio": 0.6035,
+      "max_drawdown": -8.5703,
+      "win_rate": 43.6,
+      "total_trading_days": 484,
+      "total_trades": 82,
+      "buy_count": 78,
+      "sell_count": 4,
+      "buy_sell_ratio": 19.5,
+      "final_positions": 6,
+      "regime_used": true,
+      "vol_parity_used": false
+    },
+    "+vol_parity+regime": {
+      "total_return": 30.7468,
+      "annual_return": 14.4717,
+      "sharpe_ratio": 0.9982,
+      "max_drawdown": -8.7811,
+      "win_rate": 44.42,
+      "total_trading_days": 484,
+      "total_trades": 82,
+      "buy_count": 78,
+      "sell_count": 4,
+      "buy_sell_ratio": 19.5,
+      "final_positions": 6,
+      "regime_used": true,
+      "vol_parity_used": true
+    },
+    "基准(高频)": {
+      "total_return": -10.5963,
+      "annual_return": -5.4903,
+      "sharpe_ratio": -0.4102,
+      "max_drawdown": -15.3978,
+      "win_rate": 42.56,
+      "total_trading_days": 484,
+      "total_trades": 122,
+      "buy_count": 111,
+      "sell_count": 11,
+      "buy_sell_ratio": 10.09,
+      "final_positions": 6,
+      "regime_used": false,
+      "vol_parity_used": false
+    },
+    "+vol_parity(高频)": {
+      "total_return": -1.0092,
+      "annual_return": -0.5101,
+      "sharpe_ratio": 0.0276,
+      "max_drawdown": -16.0224,
+      "win_rate": 44.63,
+      "total_trading_days": 484,
+      "total_trades": 122,
+      "buy_count": 111,
+      "sell_count": 11,
+      "buy_sell_ratio": 10.09,
+      "final_positions": 6,
+      "regime_used": false,
+      "vol_parity_used": true
+    },
+    "+regime_risk(高频)": {
+      "total_return": -10.5963,
+      "annual_return": -5.4903,
+      "sharpe_ratio": -0.4102,
+      "max_drawdown": -15.3978,
+      "win_rate": 42.56,
+      "total_trading_days": 484,
+      "total_trades": 122,
+      "buy_count": 111,
+      "sell_count": 11,
+      "buy_sell_ratio": 10.09,
+      "final_positions": 6,
+      "regime_used": true,
+      "vol_parity_used": false
+    },
+    "+vol_parity+regime(高频)": {
+      "total_return": -1.0092,
+      "annual_return": -0.5101,
+      "sharpe_ratio": 0.0276,
+      "max_drawdown": -16.0224,
+      "win_rate": 44.63,
+      "total_trading_days": 484,
+      "total_trades": 122,
+      "buy_count": 111,
+      "sell_count": 11,
+      "buy_sell_ratio": 10.09,
+      "final_positions": 6,
+      "regime_used": true,
+      "vol_parity_used": true
+    }
+  },
+  "holdout_results": {
+    "基准": {
+      "total_return": 17.7881,
+      "annual_return": 6.4782,
+      "sharpe_ratio": 0.2688,
+      "max_drawdown": -16.7569,
+      "win_rate": 46.58,
+      "total_trading_days": 1140,
+      "total_trades": 255,
+      "buy_count": 208,
+      "sell_count": 47,
+      "buy_sell_ratio": 4.43,
+      "final_positions": 3,
+      "regime_used": false,
+      "vol_parity_used": false
+    },
+    "+vol_parity": {
+      "total_return": -2.0849,
+      "annual_return": -0.8045,
+      "sharpe_ratio": 0.1126,
+      "max_drawdown": -18.9384,
+      "win_rate": 46.4,
+      "total_trading_days": 1140,
+      "total_trades": 255,
+      "buy_count": 208,
+      "sell_count": 47,
+      "buy_sell_ratio": 4.43,
+      "final_positions": 3,
+      "regime_used": false,
+      "vol_parity_used": true
+    },
+    "+regime_risk": {
+      "total_return": 17.7881,
+      "annual_return": 6.4782,
+      "sharpe_ratio": 0.2688,
+      "max_drawdown": -16.7569,
+      "win_rate": 46.58,
+      "total_trading_days": 1140,
+      "total_trades": 255,
+      "buy_count": 208,
+      "sell_count": 47,
+      "buy_sell_ratio": 4.43,
+      "final_positions": 3,
+      "regime_used": true,
+      "vol_parity_used": false
+    },
+    "+vol_parity+regime": {
+      "total_return": -2.0849,
+      "annual_return": -0.8045,
+      "sharpe_ratio": 0.1126,
+      "max_drawdown": -18.9384,
+      "win_rate": 46.4,
+      "total_trading_days": 1140,
+      "total_trades": 255,
+      "buy_count": 208,
+      "sell_count": 47,
+      "buy_sell_ratio": 4.43,
+      "final_positions": 3,
+      "regime_used": true,
+      "vol_parity_used": true
+    },
+    "基准(高频)": {
+      "total_return": 23.2186,
+      "annual_return": 8.3342,
+      "sharpe_ratio": 0.303,
+      "max_drawdown": -18.3777,
+      "win_rate": 45.96,
+      "total_trading_days": 1140,
+      "total_trades": 544,
+      "buy_count": 362,
+      "sell_count": 182,
+      "buy_sell_ratio": 1.99,
+      "final_positions": 6,
+      "regime_used": false,
+      "vol_parity_used": false
+    },
+    "+vol_parity(高频)": {
+      "total_return": 8.3014,
+      "annual_return": 3.1048,
+      "sharpe_ratio": 0.2041,
+      "max_drawdown": -17.3515,
+      "win_rate": 46.84,
+      "total_trading_days": 1140,
+      "total_trades": 544,
+      "buy_count": 362,
+      "sell_count": 182,
+      "buy_sell_ratio": 1.99,
+      "final_positions": 6,
+      "regime_used": false,
+      "vol_parity_used": true
+    },
+    "+regime_risk(高频)": {
+      "total_return": 23.2186,
+      "annual_return": 8.3342,
+      "sharpe_ratio": 0.303,
+      "max_drawdown": -18.3777,
+      "win_rate": 45.96,
+      "total_trading_days": 1140,
+      "total_trades": 544,
+      "buy_count": 362,
+      "sell_count": 182,
+      "buy_sell_ratio": 1.99,
+      "final_positions": 6,
+      "regime_used": true,
+      "vol_parity_used": false
+    },
+    "+vol_parity+regime(高频)": {
+      "total_return": 8.3014,
+      "annual_return": 3.1048,
+      "sharpe_ratio": 0.2041,
+      "max_drawdown": -17.3515,
+      "win_rate": 46.84,
+      "total_trading_days": 1140,
+      "total_trades": 544,
+      "buy_count": 362,
+      "sell_count": 182,
+      "buy_sell_ratio": 1.99,
+      "final_positions": 6,
+      "regime_used": true,
+      "vol_parity_used": true
+    }
+  },
+  "wf_results": {
+    "基准": {
+      "fold_returns": [
+        -10.2791,
+        3.5104,
+        -4.6306,
+        19.1071,
+        1.4295
+      ],
+      "fold_sharpe": [
+        -1.0456,
+        0.2614,
+        -0.0363,
+        0.7117,
+        0.1862
+      ],
+      "avg_fold_return": 1.8275,
+      "avg_fold_sharpe": 0.0155,
+      "composite_return": 7.0012,
+      "regime_used": false,
+      "vol_parity_used": false
+    },
+    "+vol_parity": {
+      "fold_returns": [
+        -7.1367,
+        2.9906,
+        -5.5072,
+        14.1749,
+        -6.1262
+      ],
+      "fold_sharpe": [
+        -0.542,
+        0.2433,
+        -0.0393,
+        0.6504,
+        -0.1189
+      ],
+      "avg_fold_return": -0.3209,
+      "avg_fold_sharpe": 0.0387,
+      "composite_return": -3.1375,
+      "regime_used": false,
+      "vol_parity_used": true
+    },
+    "+regime_risk": {
+      "fold_returns": [
+        -10.2791,
+        3.5104,
+        -4.6306,
+        19.1071,
+        1.4295
+      ],
+      "fold_sharpe": [
+        -1.0456,
+        0.2614,
+        -0.0363,
+        0.7117,
+        0.1862
+      ],
+      "avg_fold_return": 1.8275,
+      "avg_fold_sharpe": 0.0155,
+      "composite_return": 7.0012,
+      "regime_used": true,
+      "vol_parity_used": false
+    },
+    "+vol_parity+regime": {
+      "fold_returns": [
+        -7.1367,
+        2.9906,
+        -5.5072,
+        14.1749,
+        -6.1262
+      ],
+      "fold_sharpe": [
+        -0.542,
+        0.2433,
+        -0.0393,
+        0.6504,
+        -0.1189
+      ],
+      "avg_fold_return": -0.3209,
+      "avg_fold_sharpe": 0.0387,
+      "composite_return": -3.1375,
+      "regime_used": true,
+      "vol_parity_used": true
+    },
+    "基准(高频)": {
+      "fold_returns": [
+        -10.0257,
+        1.6902,
+        -8.5932,
+        29.9882,
+        -0.1219
+      ],
+      "fold_sharpe": [
+        -0.9094,
+        0.2132,
+        -0.1433,
+        0.9009,
+        0.1274
+      ],
+      "avg_fold_return": 2.5875,
+      "avg_fold_sharpe": 0.0378,
+      "composite_return": 8.5801,
+      "regime_used": false,
+      "vol_parity_used": false
+    },
+    "+vol_parity(高频)": {
+      "fold_returns": [
+        -5.2244,
+        0.8182,
+        -11.6921,
+        21.0263,
+        0.4573
+      ],
+      "fold_sharpe": [
+        -0.4287,
+        0.1773,
+        -0.2343,
+        0.7894,
+        0.1488
+      ],
+      "avg_fold_return": 1.0771,
+      "avg_fold_sharpe": 0.0905,
+      "composite_return": 2.5879,
+      "regime_used": false,
+      "vol_parity_used": true
+    },
+    "+regime_risk(高频)": {
+      "fold_returns": [
+        -10.0257,
+        1.6902,
+        -8.5932,
+        29.9882,
+        -0.1219
+      ],
+      "fold_sharpe": [
+        -0.9094,
+        0.2132,
+        -0.1433,
+        0.9009,
+        0.1274
+      ],
+      "avg_fold_return": 2.5875,
+      "avg_fold_sharpe": 0.0378,
+      "composite_return": 8.5801,
+      "regime_used": true,
+      "vol_parity_used": false
+    },
+    "+vol_parity+regime(高频)": {
+      "fold_returns": [
+        -5.2244,
+        0.8182,
+        -11.6921,
+        21.0263,
+        0.4573
+      ],
+      "fold_sharpe": [
+        -0.4287,
+        0.1773,
+        -0.2343,
+        0.7894,
+        0.1488
+      ],
+      "avg_fold_return": 1.0771,
+      "avg_fold_sharpe": 0.0905,
+      "composite_return": 2.5879,
+      "regime_used": true,
+      "vol_parity_used": true
+    }
+  }
+}
