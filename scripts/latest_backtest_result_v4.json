@@ -1,0 +1,13 @@
+{
+  "total_return": 0.2904782288011034,
+  "annual_return": 0.18013273018066878,
+  "sharpe_ratio": 0.748820771835966,
+  "max_drawdown": 0.22196773272725262,
+  "win_rate": 0.5581395348837209,
+  "total_trades": 86,
+  "max_consecutive_loss": 71,
+  "avg_win_pct": 0.10784182954009293,
+  "avg_loss_pct": -0.07886576080177858,
+  "final_nav": 1290478.2288011033,
+  "version": "v4"
+}

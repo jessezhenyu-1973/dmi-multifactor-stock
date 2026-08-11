@@ -1,0 +1,14 @@
+{
+  "total_return": -0.17723140445069918,
+  "annual_return": -0.11900350497871048,
+  "sharpe": -1.193925011095241,
+  "max_drawdown": 0.21563916754500914,
+  "win_rate": 0.3584905660377358,
+  "trades": 53,
+  "max_consec_loss": 328,
+  "avg_win": 0.060898168004621646,
+  "avg_loss": -0.06388787437234701,
+  "market_filter_days": 106,
+  "total_days": 388,
+  "market_filter_pct": 27.31958762886598
+}

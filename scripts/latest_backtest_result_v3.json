@@ -1,0 +1,14 @@
+{
+  "total_return": 0.039725662814201534,
+  "annual_return": 0.02562470918959847,
+  "sharpe_ratio": 0.05161855397651585,
+  "max_drawdown": 0.17618973646245,
+  "win_rate": 0.4175824175824176,
+  "total_trades": 91,
+  "max_consecutive_loss": 89,
+  "final_nav": 1039725.6628142014,
+  "trading_days": 388,
+  "start_date": "2025-01-02 00:00:00",
+  "end_date": "2026-08-10 00:00:00",
+  "version": "v3"
+}
