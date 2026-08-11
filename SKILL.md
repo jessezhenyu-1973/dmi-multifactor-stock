@@ -145,6 +145,7 @@ cd "<skill>/scripts"
 - `examples/tune_best.json` — `tune.py` 网格搜索最优配置
 - `examples/real_backtest_fundamental.log` — `multi_factor_dmi_strategy.py --real` 单轮真实回测样例
 - `examples/README.md` — 上述文件说明 + 关键结论速览
+- `examples/hs300_real_backtest_2026-08-11.md` — `--real-hs300` 全样本 + walk-forward 实测（288 只、2022–2025 时点正确数据，含 OOS 诚实结论：全样本 +32% 在样本外塌到 ~0%，regime 在 V 型市拖累）
 
 > 这些结果是 2023–2024 沪深300 的历史回测演示，仅作方法参考，不构成投资建议。
 
